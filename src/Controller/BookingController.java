@@ -2,14 +2,18 @@ package Controller;
 
 import Model.*;
 import Model.enums.*;
+import Model.strategy.*;
 
-import java.awt.print.Book;
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 public class BookingController {
     private List<Booking> bookings = new ArrayList<>();
     private List<Payment> payments = new ArrayList<>();
     private List<Ticket> tickets = new ArrayList<>();
+    private PricingStrategy pricingStrategy = new StandardPricingStrategy();
     private int bookingCounter = 0;
     private int paymentCounter = 0;
     private int ticketCounter = 0;
@@ -28,8 +32,8 @@ public class BookingController {
         if(!seat.isAvailable()) {
             throw new IllegalArgumentException("Seat is not available: " + seatNumber);
         }
-
-        double totalPrice = seat.calculatePrice(flight.getBasePrice());
+        setPricingStrategy(selectStrategy(flight));
+        double totalPrice = pricingStrategy.calculatePrice(flight, seat);
         Booking booking = new Booking("BK" + (++bookingCounter), passenger, flight, seat, totalPrice);
         seat.setStatus(SeatStatus.RESERVED);
         bookings.add(booking);
@@ -92,5 +96,21 @@ public class BookingController {
                 break;
             }
         }
+    }
+
+    private PricingStrategy selectStrategy(Flight flight) {
+        DayOfWeek day = flight.getDepartureTime().getDayOfWeek();
+        if(day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
+            return new WeekendPricingStrategy();
+        }
+        long daysBefore = ChronoUnit.DAYS.between(LocalDateTime.now(), flight.getDepartureTime());
+        if(daysBefore >= 30) {
+            return new EarlyBirdPricingStrategy();
+        }
+        return new StandardPricingStrategy();
+    }
+
+    public void setPricingStrategy(PricingStrategy pricingStrategy) {
+        this.pricingStrategy = pricingStrategy;
     }
 }

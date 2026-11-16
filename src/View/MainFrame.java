@@ -4,9 +4,10 @@ import Controller.*;
 import Model.*;
 import Model.enums.*;
 import Model.factory.SeatFactory;
-
+import javax.swing.table.TableCellRenderer;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+
 import java.awt.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -26,14 +27,36 @@ public class MainFrame extends JFrame {
 
     public MainFrame() {
         super("Airline Reservation System");
-        seedSampleFlights();
+        flightController.seedSampleData();
 
         tableModel = new DefaultTableModel(
                 new String[]{"Flight No", "From", "To", "Departure", "Arrival", "Base Price"}, 0) {
             @Override
             public boolean isCellEditable(int row, int col) { return false; }
         };
-        flightTable = new JTable(tableModel);
+        flightTable = new JTable(tableModel) {
+          @Override
+          public Component prepareRenderer(TableCellRenderer renderer, int row, int col) {
+              Component c = super.prepareRenderer(renderer, row, col);
+              if(!isRowSelected(row)) {
+                  c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(232,240, 248));
+              }
+              ((JLabel) c).setHorizontalAlignment(SwingConstants.CENTER);
+              return c;
+          }
+        };
+        flightTable.setRowHeight(26);
+        flightTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        flightTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        flightTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JLabel title = new JLabel("AIRLINE RESERVATION SYSTEM");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(Color.WHITE);
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(new Color(31, 78, 120));
+        header.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        header.add(title, BorderLayout.CENTER);
+        add(header, BorderLayout.NORTH);
         add(new JScrollPane(flightTable), BorderLayout.CENTER);
 
         JButton refreshBtn = new JButton("Refresh");
@@ -197,32 +220,5 @@ public class MainFrame extends JFrame {
     private void showError(String msg) {
         statusLabel.setText("Error: " + msg);
         JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
-    }
-
-    // --- Seed data (same sample flights as the console version) ---
-    private List<Seat> createSeats(int totalSeats) {
-        List<Seat> seats = new ArrayList<>();
-        String letters = "ABCDEF";
-        for (int i = 0; i < totalSeats; i++) {
-            String seatNumber = (i / 6 + 1) + "" + letters.charAt(i % 6);
-            SeatClass seatClass;
-            if (i < 6) seatClass = SeatClass.FIRST;
-            else if (i < 12) seatClass = SeatClass.BUSINESS;
-            else seatClass = SeatClass.ECONOMY;
-            seats.add(SeatFactory.createSeat(seatClass, seatNumber));
-        }
-        return seats;
-    }
-
-    private void seedSampleFlights() {
-        Aircraft a1 = new Aircraft("AC001", "Airbus A320", "Airbus", 18);
-        Aircraft a2 = new Aircraft("AC002", "Boeing 787", "Boeing", 18);
-        Aircraft a3 = new Aircraft("AC003", "Airbus A321", "Airbus", 18);
-        LocalDateTime dep1 = LocalDateTime.now().plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime dep2 = LocalDateTime.now().plusDays(1).withHour(14).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime dep3 = LocalDateTime.now().plusDays(2).withHour(9).withMinute(30).withSecond(0).withNano(0);
-        flightController.addFlight(new Flight("VN123", "HAN", "SGN", dep1, dep1.plusHours(2), a1, 1500000, createSeats(18)));
-        flightController.addFlight(new Flight("VN456", "SGN", "DAD", dep2, dep2.plusHours(1).plusMinutes(30), a2, 1200000, createSeats(18)));
-        flightController.addFlight(new Flight("VN789", "HAN", "DAD", dep3, dep3.plusHours(1).plusMinutes(30), a3, 900000, createSeats(18)));
     }
 }
